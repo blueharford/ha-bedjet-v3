@@ -1,0 +1,7 @@
+{
+  "name": "BedJet V3 Climate Control",
+  "render_readme": true,
+  "domains": ["climate"],
+  "homeassistant": "2025.9.0",
+  "iot_class": "Local Polling"
+}
