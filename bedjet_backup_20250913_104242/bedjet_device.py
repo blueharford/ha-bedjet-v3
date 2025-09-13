@@ -15,7 +15,6 @@ from .const import (
     BEDJET_NAME_UUID,
     BEDJET_STATUS_UUID,
     BedJetMode,
-    BedJetPreset,
     MAX_FAN_SPEED,
     MAX_TEMP,
     MIN_FAN_SPEED,
@@ -154,32 +153,24 @@ class BedJetDevice:
         """Handle status update from BedJet."""
         try:
             if len(data) >= 15:
-                _LOGGER.debug("Received status data: %s", data.hex())
-                
                 # Parse temperature data (bytes 7 and 8)
                 # Temperature formula: ((byte - 0x26) + 66) - ((byte - 0x26) / 9)
-                if data[7] != 0 and data[7] != 0x26:  # Valid current temp
+                if data[7] != 0:
                     raw_current = data[7] - 0x26
                     self._current_temp = round((raw_current + 66) - (raw_current / 9))
-                    _LOGGER.debug("Current temp byte: 0x%02x -> %s°F", data[7], self._current_temp)
                 
-                if data[8] != 0 and data[8] != 0x26:  # Valid target temp
+                if data[8] != 0:
                     raw_target = data[8] - 0x26
                     self._target_temp = round((raw_target + 66) - (raw_target / 9))
-                    _LOGGER.debug("Target temp byte: 0x%02x -> %s°F", data[8], self._target_temp)
                 
                 # Parse time remaining (bytes 4, 5, 6 for hours, minutes, seconds)
                 self._time_remaining = (data[4] * 3600) + (data[5] * 60) + data[6]
                 
                 # Parse fan speed (byte 10, multiply by 5 for percentage)
-                if data[10] > 0:
-                    self._fan_speed = data[10] * FAN_STEP
-                    _LOGGER.debug("Fan speed byte: 0x%02x -> %s%%", data[10], self._fan_speed)
+                self._fan_speed = data[10] * FAN_STEP
                 
                 # Parse mode (bytes 13 and 14)
-                old_mode = self._mode
                 if len(data) >= 15:
-                    mode_combo = (data[13], data[14])
                     if data[14] == 0x50 and data[13] == 0x14:
                         self._mode = "off"
                     elif data[14] == 0x34:
@@ -192,11 +183,6 @@ class BedJetDevice:
                         self._mode = "dry"
                     elif data[14] == 0x43:
                         self._mode = "ext_ht"
-                    else:
-                        _LOGGER.debug("Unknown mode bytes: 0x%02x 0x%02x", data[13], data[14])
-                
-                if self._mode != old_mode:
-                    _LOGGER.debug("Mode changed from %s to %s", old_mode, self._mode)
                 
                 self._notify_callbacks()
                 
@@ -207,13 +193,6 @@ class BedJetDevice:
         """Update device state by requesting current status."""
         if not self.is_connected:
             await self.connect()
-        
-        # Request current status - this may trigger a status notification
-        try:
-            # Some BedJet devices respond to a status request command
-            await self._send_command([0x01, 0x00])  # Status request
-        except Exception as err:
-            _LOGGER.debug("Status request failed (this is normal for some devices): %s", err)
 
     async def _send_command(self, command: list[int]) -> None:
         """Send a command to the BedJet."""
@@ -221,13 +200,7 @@ class BedJetDevice:
             raise BleakError("Device not connected")
         
         try:
-            command_bytes = bytearray(command)
-            _LOGGER.debug("Sending command: %s", command_bytes.hex())
-            await self.client.write_gatt_char(BEDJET_COMMAND_UUID, command_bytes)
-            
-            # Wait a moment for the command to be processed
-            await asyncio.sleep(0.3)
-            
+            await self.client.write_gatt_char(BEDJET_COMMAND_UUID, bytearray(command))
         except Exception as err:
             _LOGGER.error("Failed to send command %s: %s", command, err)
             raise
@@ -246,14 +219,7 @@ class BedJetDevice:
             raise ValueError(f"Temperature {temperature} out of range {MIN_TEMP}-{MAX_TEMP}")
         
         # Convert temperature to BedJet format
-        # Reverse engineering: temp_byte = ((temp - 66) + (temp - 66) / 9) + 0x26
-        temp_offset = temperature - 66
-        temp_byte = int(temp_offset + (temp_offset / 9) + 0x26)
-        
-        # Ensure byte is in valid range
-        temp_byte = max(0, min(255, temp_byte))
-        
-        _LOGGER.debug("Setting temperature %s°F (byte: 0x%02x)", temperature, temp_byte)
+        temp_byte = int((temperature - 60) / 9) + (temperature - 66) + 0x26
         await self._send_command([0x03, temp_byte])
 
     async def set_fan_speed(self, speed: int) -> None:

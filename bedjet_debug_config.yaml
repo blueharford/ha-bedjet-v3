@@ -1,0 +1,12 @@
+# Add this to your configuration.yaml to enable debug logging for BedJet
+
+logger:
+  default: info
+  logs:
+    custom_components.bedjet: debug
+    custom_components.bedjet.bedjet_device: debug
+    custom_components.bedjet.climate: debug
+    homeassistant.components.bluetooth: debug
+
+# After adding this, restart Home Assistant to see detailed logs
+# Check logs at: Settings -> System -> Logs

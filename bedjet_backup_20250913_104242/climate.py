@@ -41,13 +41,7 @@ BEDJET_MODE_TO_HVAC = {
     "ext_ht": HVACMode.HEAT,
 }
 
-# Map HVAC modes back to BedJet modes (handle multiple mappings)
-HVAC_MODE_TO_BEDJET = {
-    HVACMode.OFF: "off",
-    HVACMode.COOL: "cool", 
-    HVACMode.HEAT: "heat",  # Default to regular heat, not turbo
-    HVACMode.DRY: "dry",
-}
+HVAC_MODE_TO_BEDJET = {v: k for k, v in BEDJET_MODE_TO_HVAC.items()}
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -86,15 +80,9 @@ class BedJetUpdateCoordinator(DataUpdateCoordinator):
                 "mode": self.device.mode,
                 "fan_speed": self.device.fan_speed,
                 "time_remaining": self.device.time_remaining,
-                "is_connected": self.device.is_connected,
             }
         except Exception as err:
             _LOGGER.error("Error updating data: %s", err)
-            # Try to reconnect on error
-            try:
-                await self.device.connect()
-            except Exception:
-                pass  # Will retry next update
             raise
 
 class BedJetClimate(CoordinatorEntity, ClimateEntity):
@@ -115,8 +103,6 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_ON
-        | ClimateEntityFeature.TURN_OFF
     )
 
     def __init__(self, coordinator: BedJetUpdateCoordinator, device: BedJetDevice) -> None:
@@ -125,7 +111,6 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
         self.device = device
         self._attr_unique_id = device.mac_address.replace(":", "").lower()
         self._attr_name = device.name or f"BedJet ({device.mac_address})"
-        self._last_hvac_mode = HVACMode.HEAT  # Remember last non-off mode
         
         # Set up device callback
         self.device.add_callback(self._handle_device_update)
@@ -142,11 +127,6 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
         )
 
     @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self.device.is_connected
-
-    @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
         return self.device.current_temperature
@@ -161,11 +141,7 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
         """Return current operation mode."""
         mode = self.device.mode
         if mode in BEDJET_MODE_TO_HVAC:
-            hvac_mode = BEDJET_MODE_TO_HVAC[mode]
-            # Remember last non-off mode for turn_on functionality
-            if hvac_mode != HVACMode.OFF:
-                self._last_hvac_mode = hvac_mode
-            return hvac_mode
+            return BEDJET_MODE_TO_HVAC[mode]
         return HVACMode.OFF
 
     @property
@@ -201,10 +177,6 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
         
         try:
             await self.device.set_temperature(temperature)
-            # Give the device time to process the command
-            await asyncio.sleep(0.5)
-            # Force an update to get the new state
-            await self.coordinator.async_request_refresh()
         except Exception as err:
             _LOGGER.error("Failed to set temperature: %s", err)
 
@@ -217,10 +189,6 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
         bedjet_mode = HVAC_MODE_TO_BEDJET[hvac_mode]
         try:
             await self.device.set_mode(bedjet_mode)
-            # Give the device time to process the command
-            await asyncio.sleep(0.5)
-            # Force an update to get the new state
-            await self.coordinator.async_request_refresh()
         except Exception as err:
             _LOGGER.error("Failed to set HVAC mode: %s", err)
 
@@ -230,37 +198,10 @@ class BedJetClimate(CoordinatorEntity, ClimateEntity):
             # Extract percentage from string like "50%"
             speed = int(fan_mode.rstrip("%"))
             await self.device.set_fan_speed(speed)
-            # Give the device time to process the command
-            await asyncio.sleep(0.5)
-            # Force an update to get the new state
-            await self.coordinator.async_request_refresh()
         except (ValueError, AttributeError) as err:
             _LOGGER.error("Invalid fan mode %s: %s", fan_mode, err)
         except Exception as err:
             _LOGGER.error("Failed to set fan mode: %s", err)
-
-    async def async_turn_on(self) -> None:
-        """Turn the entity on."""
-        try:
-            # Turn on using the last known mode (or default to heat)
-            await self.device.set_mode(HVAC_MODE_TO_BEDJET.get(self._last_hvac_mode, "heat"))
-            # Give the device time to process the command
-            await asyncio.sleep(0.5)
-            # Force an update to get the new state
-            await self.coordinator.async_request_refresh()
-        except Exception as err:
-            _LOGGER.error("Failed to turn on BedJet: %s", err)
-
-    async def async_turn_off(self) -> None:
-        """Turn the entity off."""
-        try:
-            await self.device.set_mode("off")
-            # Give the device time to process the command
-            await asyncio.sleep(0.5)
-            # Force an update to get the new state
-            await self.coordinator.async_request_refresh()
-        except Exception as err:
-            _LOGGER.error("Failed to turn off BedJet: %s", err)
 
     async def async_will_remove_from_hass(self) -> None:
         """Remove device callback when entity is removed."""

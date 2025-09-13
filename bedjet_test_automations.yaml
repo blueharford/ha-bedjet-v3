@@ -1,0 +1,86 @@
+# BedJet Test Automations
+# Add these to your automations.yaml or create via UI to test functionality
+
+# Test 1: Turn on BedJet with heat mode
+automation:
+  - alias: "BedJet Test - Turn On Heat"
+    trigger:
+      platform: state
+      entity_id: input_boolean.bedjet_test_heat  # Create this helper first
+      to: "on"
+    action:
+      - service: climate.turn_on
+        target:
+          entity_id: climate.bedjet_bedroom  # Change to your BedJet entity
+      - service: climate.set_hvac_mode
+        target:
+          entity_id: climate.bedjet_bedroom
+        data:
+          hvac_mode: heat
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.bedjet_bedroom
+        data:
+          temperature: 75
+
+  # Test 2: Turn on BedJet with cool mode
+  - alias: "BedJet Test - Turn On Cool"
+    trigger:
+      platform: state
+      entity_id: input_boolean.bedjet_test_cool  # Create this helper first
+      to: "on"
+    action:
+      - service: climate.turn_on
+        target:
+          entity_id: climate.bedjet_bedroom
+      - service: climate.set_hvac_mode
+        target:
+          entity_id: climate.bedjet_bedroom
+        data:
+          hvac_mode: cool
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.bedjet_bedroom
+        data:
+          temperature: 68
+
+  # Test 3: Turn off BedJet
+  - alias: "BedJet Test - Turn Off"
+    trigger:
+      platform: state
+      entity_id: input_boolean.bedjet_test_off  # Create this helper first
+      to: "on"
+    action:
+      - service: climate.turn_off
+        target:
+          entity_id: climate.bedjet_bedroom
+
+  # Test 4: Temperature change test
+  - alias: "BedJet Test - Temperature Changes"
+    trigger:
+      platform: state
+      entity_id: input_number.bedjet_test_temp  # Create this helper first
+    action:
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.bedjet_bedroom
+        data:
+          temperature: "{{ trigger.to_state.state | int }}"
+
+# Create these input helpers in Settings -> Devices & Services -> Helpers:
+#
+# input_boolean:
+#   bedjet_test_heat:
+#     name: "Test BedJet Heat"
+#   bedjet_test_cool:
+#     name: "Test BedJet Cool"
+#   bedjet_test_off:
+#     name: "Test BedJet Off"
+#
+# input_number:
+#   bedjet_test_temp:
+#     name: "Test BedJet Temperature"
+#     min: 66
+#     max: 104
+#     step: 1
+#     unit_of_measurement: "°F"
