@@ -40,7 +40,27 @@ A modern Home Assistant integration for BedJet V3 climate control devices. This 
    - Click "Download"
    - Restart Home Assistant
 
-### Manual Installation
+### Manual Installation (Script)
+
+1. **Download & Extract**
+   ```bash
+   # Clone or download the repository
+   git clone https://github.com/blueharford/ha-bedjet-v3.git
+   cd ha-bedjet-v3
+   ```
+
+2. **Run Installer**
+   ```bash
+   # The installer will auto-detect your Home Assistant config directory
+   ./install.sh
+
+   # Or specify the config directory manually
+   ./install.sh /config
+   ```
+
+3. **Follow the on-screen instructions** to restart Home Assistant and configure the integration.
+
+### Manual Installation (Copy)
 
 1. **Download Files**
    - Download the latest release from [GitHub releases](https://github.com/blueharford/ha-bedjet-v3/releases)
@@ -57,10 +77,12 @@ A modern Home Assistant integration for BedJet V3 climate control devices. This 
 ## Setup
 
 ### Prerequisites
-- Home Assistant 2025.9.0 or later
+- Home Assistant 2026.1.0 or later
 - BedJet V3 device
 - Bluetooth Low Energy support on Home Assistant host
 - BedJet within Bluetooth range (≤ 30 feet recommended)
+
+> **Note:** This integration aggressively maintains the BLE connection. If your phone's BedJet app takes over the connection, Home Assistant will automatically reconnect when the phone disconnects.
 
 ### Configuration
 
@@ -129,6 +151,8 @@ Fan speed can be set from 5% to 100% in 5% increments:
 - `current_temperature` - Current bed temperature
 - `target_temperature` - Target temperature setting
 - `time_remaining` - Auto-shutoff timer remaining (seconds)
+- `time_remaining_formatted` - Human-readable timer (e.g., "1h 30m 0s")
+- `reconnect_attempts` - Number of reconnection attempts (only shown when reconnecting)
 
 ## Automation Examples
 
@@ -238,9 +262,9 @@ logger:
 ### System Requirements
 
 **Home Assistant**
-- Version 2025.9.0 or later
+- Version 2026.1.0 or later
 - Bluetooth integration enabled
-- Python 3.11 or later
+- Python 3.12 or later
 
 **Hardware**
 - BedJet V3 device (V1/V2 not supported)
@@ -263,7 +287,7 @@ logger:
 
 ### Dependencies
 - `bleak>=0.22.0` - Modern Bluetooth Low Energy library
-- `bleak-retry-connector>=3.5.0` - Connection retry logic
+- `bleak-retry-connector>=3.6.0` - Connection retry logic with disconnect callbacks
 - Home Assistant Bluetooth integration
 
 ## Contributing

@@ -16,6 +16,13 @@ BEDJET_COMMAND_UUID: Final = "00002004-bed0-0080-aa55-4265644a6574"
 UPDATE_INTERVAL: Final = 30  # seconds
 SCAN_INTERVAL: Final = 60    # seconds
 
+# Connection management
+RECONNECT_INTERVAL_BASE: Final = 2  # Base reconnect delay in seconds
+RECONNECT_INTERVAL_MAX: Final = 60  # Maximum reconnect delay in seconds
+RECONNECT_MAX_ATTEMPTS: Final = 0  # 0 = unlimited reconnection attempts
+CONNECTION_WATCHDOG_INTERVAL: Final = 15  # Check connection every N seconds
+CONNECTION_TIMEOUT: Final = 30  # Connection attempt timeout in seconds
+
 # Temperature limits (Fahrenheit)
 MIN_TEMP: Final = 66
 MAX_TEMP: Final = 104
