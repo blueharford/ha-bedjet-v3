@@ -102,32 +102,28 @@ class BedJetUpdateCoordinator(DataUpdateCoordinator):
             self.hass.async_create_task(self.async_request_refresh())
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Update data via library."""
+        """Update data via library.
+
+        Note: We don't raise UpdateFailed here because disconnections are
+        expected and handled by the device's reconnection loop. Raising
+        UpdateFailed would cause the coordinator to log errors repeatedly.
+        """
         try:
             await self.device.update()
-            return {
-                "current_temp": self.device.current_temperature,
-                "target_temp": self.device.target_temperature,
-                "mode": self.device.mode,
-                "fan_speed": self.device.fan_speed,
-                "time_remaining": self.device.time_remaining,
-                "is_connected": self.device.is_connected,
-                "reconnect_attempts": self.device.reconnect_attempts,
-            }
         except Exception as err:
-            _LOGGER.warning("Error updating BedJet data: %s", err)
-            # Return partial data with connection state even on error
-            # This allows the entity to show as unavailable while still
-            # providing diagnostic information
-            return {
-                "current_temp": self.device.current_temperature,
-                "target_temp": self.device.target_temperature,
-                "mode": self.device.mode,
-                "fan_speed": self.device.fan_speed,
-                "time_remaining": self.device.time_remaining,
-                "is_connected": self.device.is_connected,
-                "reconnect_attempts": self.device.reconnect_attempts,
-            }
+            # Only log at debug level - disconnections are handled by device
+            _LOGGER.debug("Update cycle: %s", err)
+
+        # Always return current state, even if disconnected
+        return {
+            "current_temp": self.device.current_temperature,
+            "target_temp": self.device.target_temperature,
+            "mode": self.device.mode,
+            "fan_speed": self.device.fan_speed,
+            "time_remaining": self.device.time_remaining,
+            "is_connected": self.device.is_connected,
+            "reconnect_attempts": self.device.reconnect_attempts,
+        }
 
 
 class BedJetClimate(CoordinatorEntity, ClimateEntity):
