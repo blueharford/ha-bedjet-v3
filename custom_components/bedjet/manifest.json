@@ -1,7 +1,7 @@
 {
   "domain": "bedjet",
   "name": "BedJet V3 Climate Control",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "documentation": "https://github.com/blueharford/ha-bedjet-v3",
   "issue_tracker": "https://github.com/blueharford/ha-bedjet-v3/issues",
   "dependencies": ["bluetooth"],

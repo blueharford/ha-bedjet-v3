@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026.1.1] - 2026-02-04
+
+### Fixed
+- **Connection Thrashing**: Fixed issue causing thousands of reconnection attempts that overwhelmed the Bluetooth adapter
+- **"Out of connection slots" Error**: Added proper throttling (minimum 10 seconds between connection attempts)
+- **"In Progress" Error**: Prevent concurrent connection attempts with `_connecting` flag
+- **Coordinator Conflicts**: Coordinator no longer triggers reconnections (device layer handles it exclusively)
+
+### Changed
+- Increased `RECONNECT_INTERVAL_BASE` from 2s to 10s
+- Increased `RECONNECT_INTERVAL_MAX` from 60s to 120s (2 minutes)
+- Increased `CONNECTION_WATCHDOG_INTERVAL` from 15s to 60s
+- Smarter backoff for Bluetooth adapter busy errors (waits 30+ seconds)
+- `update()` method no longer calls `connect()` directly
+
 ## [2026.1.0] - 2026-01-28
 
 ### Added
